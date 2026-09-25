@@ -82,7 +82,8 @@ Android 与 Linux 同形态：产出**命令行可执行文件**（非 APK/JNI�
   chmod +x ztnvr
   ./ztnvr -c configs/camera.conf
   ```
-- 注意：CI 在 ubuntu-24.04 上编译，二进制要求 glibc ≥ 2.39 的运行环境（较新发行版或 WSL2 最新 Ubuntu）；arm64-v8a 版本由 Android job（手动触发 workflow_dispatch）交叉编译
+- 注意：产物 `lib/` 目录已自带全部非系统依赖库（microhttpd/ffmpeg/webp/alsa 等），无需预装；仅 glibc 由运行环境提供，要求 ≥ 2.39（CI 在 ubuntu-24.04 编译；较新发行版或 WSL2 最新 Ubuntu）。arm64-v8a 版本由 Android job（手动触发 workflow_dispatch）交叉编译
+- 分发机制详解（ld.so 查找顺序、$ORIGIN rpath、patchelf、静态链接取舍）见 [docs/release-distribution.md](docs/release-distribution.md)
 
 ## 配置文件格式
 
