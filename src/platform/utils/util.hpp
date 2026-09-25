@@ -1,6 +1,24 @@
 #ifndef _INCLUDE_UTIL_HPP_
 #define _INCLUDE_UTIL_HPP_
 
+/* 自包含头：显式引入用到的全部声明，不依赖使用方的 include 顺序 */
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <vector>
+
+#include <microhttpd.h> /* MHD_VERSION / MHD_Result */
+
+#include <libavcodec/avcodec.h>  /* AVCodec / LIBAVCODEC_VERSION_MAJOR */
+#include <libavcodec/packet.h>   /* AVPacket */
+#include <libavformat/version.h> /* LIBAVFORMAT_VERSION_MAJOR / MINOR */
+#include <libavutil/frame.h>     /* AVFrame */
+
+/* media 层类型仅以指针/引用形式出现：前向声明避免 platform 反向依赖上层 */
+class Camera_t;
+class Sound_t;
+
 #define MYFFVER (LIBAVFORMAT_VERSION_MAJOR * 1000) + LIBAVFORMAT_VERSION_MINOR
 
 #if (LIBAVCODEC_VERSION_MAJOR >= 59)
