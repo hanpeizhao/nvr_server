@@ -1,7 +1,8 @@
 /* config.hpp - 由 CMake configure_file 生成，勿手动修改 */
 /* 仅保留被源码引用的特性宏；基础 libc 头文件在 ztnvr.hpp 中无条件包含 */
-/* 统一使用 #cmakedefine X 1：真值输出 #define X 1，假值输出 undef 注释，
-   兼容源码中 #ifdef 与裸值判断（#if X）两种用法 */
+/* 统一使用 cmakedefine 加 1 后缀写法：真值输出 #define X 1，假值输出 undef 注释，
+   兼容源码中 #ifdef 与裸值判断（#if X）两种用法
+   （注意：注释文字中不能出现 cmakedefine 的字面带 # 形式，会被 configure_file 当指令处理） */
 
 /* NLS（预留钩子：CMake 未设置变量时保持未定义） */
 #cmakedefine ENABLE_NLS 1
