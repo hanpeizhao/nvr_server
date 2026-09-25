@@ -5,12 +5,12 @@
 #include "media/cam/camera.hpp"
 #include "media/vroute/picture.hpp"
 #include "media/improc/alg_sec.hpp"
-#include "web/webu_getimg.hpp"
+#include "media/cam/cam_getimg.hpp"
 
 /* NOTE:  These run on the camera thread. */
 
 /* Initial the stream context items for the camera */
-void webu_getimg_init(Camera_t *cam) {
+void cam_getimg_init(Camera_t *cam) {
   cam->imgs.image_substream = NULL;
 
   cam->stream.norm.jpg_sz = 0;
@@ -55,7 +55,7 @@ void webu_getimg_init(Camera_t *cam) {
 }
 
 /* Free the stream buffers and mutex for shutdown */
-void webu_getimg_deinit(Camera_t *cam) {
+void cam_getimg_deinit(Camera_t *cam) {
   /* NOTE:  This runs on the camera thread. */
   myfree(cam->imgs.image_substream);
 
@@ -75,7 +75,7 @@ void webu_getimg_deinit(Camera_t *cam) {
 }
 
 /* Get a normal image from the motion loop and compress it*/
-static void webu_getimg_norm(Camera_t *cam) {
+static void cam_getimg_norm(Camera_t *cam) {
   if ((cam->stream.norm.jpg_cnct == 0) && (cam->stream.norm.ts_cnct == 0) &&
       (cam->stream.norm.all_cnct == 0)) {
     return;
@@ -105,7 +105,7 @@ static void webu_getimg_norm(Camera_t *cam) {
 }
 
 /* Get a substream image from the motion loop and compress it*/
-static void webu_getimg_sub(Camera_t *cam) {
+static void cam_getimg_sub(Camera_t *cam) {
   int subsize;
 
   if ((cam->stream.sub.jpg_cnct == 0) && (cam->stream.sub.ts_cnct == 0) &&
@@ -167,7 +167,7 @@ static void webu_getimg_sub(Camera_t *cam) {
 }
 
 /* Get a motion image from the motion loop and compress it*/
-static void webu_getimg_motion(Camera_t *cam) {
+static void cam_getimg_motion(Camera_t *cam) {
   if ((cam->stream.motion.jpg_cnct == 0) && (cam->stream.motion.ts_cnct == 0) &&
       (cam->stream.motion.all_cnct == 0)) {
     return;
@@ -198,7 +198,7 @@ static void webu_getimg_motion(Camera_t *cam) {
 }
 
 /* Get a source image from the motion loop and compress it*/
-static void webu_getimg_source(Camera_t *cam) {
+static void cam_getimg_source(Camera_t *cam) {
   if ((cam->stream.source.jpg_cnct == 0) && (cam->stream.source.ts_cnct == 0) &&
       (cam->stream.source.all_cnct == 0)) {
     return;
@@ -228,7 +228,7 @@ static void webu_getimg_source(Camera_t *cam) {
 }
 
 /* Get a secondary image from the motion loop and compress it*/
-static void webu_getimg_secondary(Camera_t *cam) {
+static void cam_getimg_secondary(Camera_t *cam) {
   if ((cam->stream.secondary.jpg_cnct == 0) &&
       (cam->stream.secondary.ts_cnct == 0) &&
       (cam->stream.secondary.all_cnct == 0)) {
@@ -263,13 +263,13 @@ static void webu_getimg_secondary(Camera_t *cam) {
 }
 
 /* Get image from the motion loop and compress it*/
-void webu_getimg_main(Camera_t *cam) {
+void cam_getimg_main(Camera_t *cam) {
   /*This is on the camera thread */
   pthread_mutex_lock(&cam->stream.mutex);
-  webu_getimg_norm(cam);
-  webu_getimg_sub(cam);
-  webu_getimg_motion(cam);
-  webu_getimg_source(cam);
-  webu_getimg_secondary(cam);
+  cam_getimg_norm(cam);
+  cam_getimg_sub(cam);
+  cam_getimg_motion(cam);
+  cam_getimg_source(cam);
+  cam_getimg_secondary(cam);
   pthread_mutex_unlock(&cam->stream.mutex);
 }

@@ -30,6 +30,7 @@ add_library(nvr_storage STATIC
 add_library(nvr_media STATIC
     media/cam/allcam.cpp
     media/cam/camera.cpp
+    media/cam/cam_getimg.cpp
     media/cam/libcam.cpp
     media/cam/netcam.cpp
     media/cam/video_v4l2.cpp
@@ -55,7 +56,6 @@ add_library(nvr_api STATIC
     web/webu_ans.cpp
     web/webu_api.cpp
     web/webu_file.cpp
-    web/webu_getimg.cpp
     web/webu_json.cpp
     web/webu_mpegts.cpp
     web/webu_post.cpp

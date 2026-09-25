@@ -15,7 +15,7 @@
 #include "web/webu.hpp"
 #include "storage/dbse/dbse.hpp"
 #include "media/improc/draw.hpp"
-#include "web/webu_getimg.hpp"
+#include "media/cam/cam_getimg.hpp"
 
 static void *camera_handler(void *arg) {
   ((Camera_t *)arg)->handler();
@@ -261,7 +261,7 @@ void Camera_t::detected() {
 
   if (current_image->shot <= cfg->framerate) {
     if ((cfg->stream_motion == true) && (current_image->shot != 1)) {
-      webu_getimg_main(this);
+      cam_getimg_main(this);
     }
     picture->process_motion();
   }
@@ -656,7 +656,7 @@ void Camera_t::cleanup() {
     app->dbse->exec(this, "", "event_end");
   }
 
-  webu_getimg_deinit(this);
+  cam_getimg_deinit(this);
 
   cam_close();
 
@@ -1108,7 +1108,7 @@ void Camera_t::init() {
 
   init_buffers();
 
-  webu_getimg_init(this);
+  cam_getimg_init(this);
 
   rotate = new Rotate(this);
 
@@ -1693,7 +1693,7 @@ void Camera_t::loopback() {
   vlp_putpipe(this);
 
   if (!cfg->stream_motion || shots_mt == 0) {
-    webu_getimg_main(this);
+    cam_getimg_main(this);
   }
 }
 
