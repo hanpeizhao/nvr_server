@@ -1,0 +1,26 @@
+{
+  "name": "ztnvr-webui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "ZTNVR NVR server web management UI",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "mpegts.js": "^1.7.3",
+    "naive-ui": "^2.40.3",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  }
+}

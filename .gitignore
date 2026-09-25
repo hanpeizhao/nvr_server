@@ -1,0 +1,17 @@
+# Build directories
+build*/
+out/
+
+# Qt Creator
+*.user
+*.autosave
+
+# Frontend build output (webui/ is the committed prebuilt bundle)
+frontend/node_modules/
+frontend/dist/
+
+# Local tool workspace
+.trae/
+
+# IDE local config
+.vscode/

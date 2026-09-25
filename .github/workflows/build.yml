@@ -1,0 +1,101 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux-build:
+    name: Linux build (cmake + ctest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libmicrohttpd-dev libjpeg-dev zlib1g-dev \
+            libavutil-dev libavformat-dev libavcodec-dev libswscale-dev libavdevice-dev \
+            libsqlite3-dev libwebp-dev libpulse-dev libasound2-dev libfftw3-dev
+
+      - name: Configure
+        run: cmake -B build -DNVR_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  webui-build:
+    name: Web UI build (Vue3 + Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  android-build:
+    # Android 交叉编译依赖 vcpkg 源码构建（ffmpeg 等耗时较长），仅手动触发
+    name: Android build (arm64-v8a, vcpkg + NDK)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect NDK
+        run: |
+          NDK_DIR=$(ls -d /usr/local/lib/android/sdk/ndk/* 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "${NDK_DIR}" ]; then
+            echo "NDK not found on runner"; exit 1
+          fi
+          echo "ANDROID_NDK_HOME=${NDK_DIR}" >> "${GITHUB_ENV}"
+          echo "Using NDK: ${NDK_DIR}"
+
+      - name: Setup vcpkg
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "${GITHUB_WORKSPACE}/vcpkg"
+          "${GITHUB_WORKSPACE}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: Cache vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-arm64-android-1
+          restore-keys: |
+            vcpkg-arm64-android-
+
+      - name: Install dependencies (arm64-android)
+        run: >-
+          "${GITHUB_WORKSPACE}/vcpkg/vcpkg" install --triplet arm64-android
+          ffmpeg libmicrohttpd libjpeg-turbo zlib sqlite3 libwebp fftw3
+
+      - name: Configure
+        run: >-
+          cmake -B build
+          -DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_CHAIN_LOAD_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake
+          -DVCPKG_TARGET_TRIPLET=arm64-android
+          -DANDROID_ABI=arm64-v8a
+          -DANDROID_PLATFORM=android-26
+          -DWITH_WEBUI=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
