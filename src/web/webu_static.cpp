@@ -66,12 +66,19 @@ static bool webu_static_valid(const std::string &dir) {
 
   if ((stat(dir.c_str(), &file_attrib) != 0) ||
       (!S_ISDIR(file_attrib.st_mode))) {
+    MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot candidate not a directory: %s",
+               dir.c_str());
     return false;
   }
 
   index_nm = dir + "/index.html";
-  return (stat(index_nm.c_str(), &file_attrib) == 0) &&
-         S_ISREG(file_attrib.st_mode);
+  if ((stat(index_nm.c_str(), &file_attrib) != 0) ||
+      (!S_ISREG(file_attrib.st_mode))) {
+    MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
+               "webroot candidate has no index.html: %s", dir.c_str());
+    return false;
+  }
+  return true;
 }
 
 /* Locate the webroot directory.  The build/deploy step places the compiled
@@ -85,7 +92,11 @@ static bool webu_static_root(std::string &webroot) {
   size_t pos;
 
   webroot = "webui";
+  MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
+             "probing webroot candidate 1 (cwd relative): %s", webroot.c_str());
   if (webu_static_valid(webroot)) {
+    MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot resolved: %s",
+               webroot.c_str());
     return true;
   }
 
@@ -97,18 +108,31 @@ static bool webu_static_root(std::string &webroot) {
     pos = dir.rfind("/");
     if (pos != std::string::npos) {
       dir = dir.substr(0, pos) + "/webui";
+      MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
+                 "probing webroot candidate 2 (exe directory): %s",
+                 dir.c_str());
       if (webu_static_valid(dir)) {
         webroot = dir;
+        MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot resolved: %s",
+                   webroot.c_str());
         return true;
       }
     }
+  } else {
+    MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "readlink /proc/self/exe failed");
   }
 
   webroot = std::string(configdir) + "/webui";
+  MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
+             "probing webroot candidate 3 (configdir): %s", webroot.c_str());
   if (webu_static_valid(webroot)) {
+    MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot resolved: %s",
+               webroot.c_str());
     return true;
   }
 
+  MOTPLS_LOG(ERR, TYPE_ALL, NO_ERRNO,
+             "no valid webui directory found in any candidate location");
   webroot = "";
   return false;
 }
@@ -153,6 +177,9 @@ void WebStatic::main() {
     if ((stat(full_nm.c_str(), &statbuf) != 0) ||
         (!S_ISREG(statbuf.st_mode))) {
       /* No webui bundle present on this system */
+      MOTPLS_LOG(ERR, TYPE_ALL, NO_ERRNO,
+                 "webui fallback to index.html failed: url=\"%s\" webroot=\"%s\" probed=\"%s\"",
+                 webua->url.c_str(), webroot.c_str(), full_nm.c_str());
       webua->resp_page =
           "<html><head><title>WebUI not installed</title></head><body>"
           "The web interface bundle was not found.  Build the frontend and "
