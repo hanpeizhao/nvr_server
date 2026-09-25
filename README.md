@@ -84,6 +84,8 @@ Android 与 Linux 同形态：产出**命令行可执行文件**（非 APK/JNI�
   ```
 - 注意：产物 `lib/` 目录已自带全部非系统依赖库（microhttpd/ffmpeg/webp/alsa 等），无需预装；仅 glibc 由运行环境提供，要求 ≥ 2.39（CI 在 ubuntu-24.04 编译；较新发行版或 WSL2 最新 Ubuntu）。arm64-v8a 版本由 Android job（手动触发 workflow_dispatch）交叉编译
 - 分发机制详解（ld.so 查找顺序、$ORIGIN rpath、patchelf、静态链接取舍）见 [docs/release-distribution.md](docs/release-distribution.md)
+- 项目实现原理（功能清单、线程模型、环形缓冲、运动检测、Web 层）见 [docs/implementation.md](docs/implementation.md)
+- 项目定位（与 ZLMediaKit 的区别、拉流 vs 推流模式、为什么不做推流中转、OBS 推流接入实操）见 [docs/positioning.md](docs/positioning.md)
 
 ## 配置文件格式
 
