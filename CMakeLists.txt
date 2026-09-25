@@ -1,10 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(NVR LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CheckIncludeFile)
-include(CheckIncludeFiles)
-include(CheckSymbolExists)
 include(CheckCXXSourceCompiles)
 include(FindPkgConfig)
 
@@ -31,35 +29,17 @@ execute_process(
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/version.sh
     OUTPUT_VARIABLE ZTNVR_VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
 )
+if(NOT ZTNVR_VERSION)
+    set(ZTNVR_VERSION "0.0.0-dev")
+endif()
 set(PROJECT_VERSION ${ZTNVR_VERSION})
 
 # ------------------------------------------------------------------------------
 # C++标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# ------------------------------------------------------------------------------
-# 检查系统头文件
-# 注：regex.h（Android Bionic 无 POSIX regex）与 linux/videodev2.h（可选依赖，
-# NDK sysroot 亦提供）不在强检列表，见下方独立检测
-set(REQUIRED_HEADERS
-    stdio.h stdlib.h sys/time.h sys/wait.h sys/ioctl.h sys/mman.h sys/param.h
-    sys/socket.h stdarg.h fcntl.h time.h signal.h limits.h errno.h assert.h
-    netdb.h ctype.h math.h locale.h dirent.h arpa/inet.h netinet/in.h
-    termios.h memory.h inttypes.h stdint.h strings.h string.h
-    sys/stat.h sys/types.h unistd.h
-)
-foreach(header ${REQUIRED_HEADERS})
-    string(REPLACE "/" "_" header_var ${header})
-    string(REPLACE "." "_" header_var ${header_var})
-    string(TOUPPER ${header_var} header_var_upper)
-    check_include_file(${header} HAVE_${header_var_upper})
-
-    if(NOT HAVE_${header_var_upper})
-        message(FATAL_ERROR "Required system header ${header} not found.")
-    endif()
-endforeach()
 
 # ------------------------------------------------------------------------------
 # 检查 pkgconf（vcpkg 模式下不依赖 pkg-config）
@@ -69,28 +49,18 @@ if(NOT PKGCONF_EXECUTABLE AND NOT NVR_USING_VCPKG)
 endif()
 
 # ------------------------------------------------------------------------------
-# 检查 pthread
+# 必选依赖：pthread / jpeg / libmicrohttpd / zlib
 find_package(Threads REQUIRED)
-check_include_file(pthread.h HAVE_PTHREAD_H)
-if(NOT HAVE_PTHREAD_H)
-    message(FATAL_ERROR "pthread is required.")
-endif()
 
-# ------------------------------------------------------------------------------
-# 检查 jpeg
 find_package(JPEG REQUIRED)
-check_include_file(setjmp.h HAVE_SETJMP_H)
-# vcpkg 场景下 jpeglib.h 不在系统默认路径，需显式带入 JPEG_INCLUDE_DIRS
 set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS})
-check_include_file(jerror.h HAVE_JERROR_H)
-check_include_files("stddef.h;stdio.h;jpeglib.h" HAVE_JPEGLIB_H)
+check_include_file(jpeglib.h HAVE_JPEGLIB_H)
 unset(CMAKE_REQUIRED_INCLUDES)
-if(NOT (HAVE_SETJMP_H AND HAVE_JERROR_H AND HAVE_JPEGLIB_H))
+if(NOT HAVE_JPEGLIB_H)
     message(FATAL_ERROR "Required jpeg headers not found")
 endif()
 
-# ------------------------------------------------------------------------------
-# 检查 libmicrohttpd（无 cmake config：vcpkg 用 find_path/find_library，Linux 用 pkg-config）
+# libmicrohttpd 无 cmake config：vcpkg 用 find_path/find_library，Linux 用 pkg-config
 if(NVR_USING_VCPKG)
     find_path(MICROHTTPD_INCLUDE_DIR microhttpd.h)
     find_library(MICROHTTPD_LIBRARY NAMES microhttpd)
@@ -102,15 +72,7 @@ if(NVR_USING_VCPKG)
 else()
     pkg_check_modules(MICROHTTPD libmicrohttpd REQUIRED)
 endif()
-set(CMAKE_REQUIRED_INCLUDES ${MICROHTTPD_INCLUDE_DIRS})
-check_include_file(microhttpd.h HAVE_MICROHTTPD_H)
-unset(CMAKE_REQUIRED_INCLUDES)
-if(NOT HAVE_MICROHTTPD_H)
-    message(FATAL_ERROR "Required package libmicrohttpd-dev not found")
-endif()
 
-# ------------------------------------------------------------------------------
-# 检查 zlib
 find_package(ZLIB REQUIRED)
 set(CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
 check_include_file(zlib.h HAVE_ZLIB_H)
@@ -120,30 +82,23 @@ if(NOT HAVE_ZLIB_H)
 endif()
 
 # ------------------------------------------------------------------------------
-# 检查 pthread_np.h / regex.h（Android Bionic 无 POSIX regex，netcam 走降级解析）
+# 平台特性探测（非致命：缺失时源码走内置降级路径，宏经 #cmakedefine 输出）
 check_include_file(pthread_np.h HAVE_PTHREAD_NP_H)
+# Android Bionic 无 POSIX regex，netcam 的 URL 解析走降级实现
 check_include_file(regex.h HAVE_REGEX_H)
+# NDK sysroot 亦提供 videodev2.h
+check_include_file(linux/videodev2.h HAVE_LINUX_VIDEODEV2_H)
 
-# ------------------------------------------------------------------------------
-# 检查 pthread_setname_np / pthread_getname_np
 check_cxx_source_compiles("
     #include <pthread.h>
     int main() { pthread_setname_np(pthread_self(), \"name\"); return 0; }
 " HAVE_PTHREAD_SETNAME_NP)
-if(HAVE_PTHREAD_SETNAME_NP)
-    set(HAVE_PTHREAD_SETNAME_NP 1)
-endif()
 
 check_cxx_source_compiles("
     #include <pthread.h>
     int main() { char buf[16]; pthread_getname_np(pthread_self(), buf, sizeof(buf)); return 0; }
 " HAVE_PTHREAD_GETNAME_NP)
-if(HAVE_PTHREAD_GETNAME_NP)
-    set(HAVE_PTHREAD_GETNAME_NP 1)
-endif()
 
-# ------------------------------------------------------------------------------
-# 检查 XSI strerror_r
 check_cxx_source_compiles("
     #include <string.h>
     #include <errno.h>
@@ -152,13 +107,10 @@ check_cxx_source_compiles("
       int ret = strerror_r(ENOMEM, buf, sizeof(buf));
       return ret;
     }
-" HAVE_XSI_STRERROR_R)
-if(HAVE_XSI_STRERROR_R)
-    set(XSI_STRERROR_R 1)
-endif()
+" XSI_STRERROR_R)
 
 # ------------------------------------------------------------------------------
-# 检查可选库（V4L2、WebP、libcamera、FFmpeg、OpenCV、MariaDB、MySQL、PostgreSQL、SQLite3、Pulse、ALSA、FFTW3）
+# 可选依赖开关
 option(WITH_V4L2 "Enable V4L2 devices" ON)
 option(WITH_WEBP "Compile with Webp image support" ON)
 option(WITH_LIBCAM "Compile with libcamera support" ON)
@@ -175,13 +127,12 @@ option(WITH_FFTW3 "Build with FFTW3 support" ON)
 set(NVR_OPTIONAL_INCLUDE_DIRS)
 set(NVR_OPTIONAL_LIBRARIES)
 
-# V4L2 头文件（非致命：Android NDK sysroot 亦提供）
-check_include_file(linux/videodev2.h HAVE_LINUX_VIDEODEV2_H)
-
+# V4L2
 if(WITH_V4L2 AND HAVE_LINUX_VIDEODEV2_H)
     set(HAVE_V4L2 1)
 endif()
 
+# WebP：vcpkg 走 config targets，Linux 走 pkg-config
 if(WITH_WEBP)
     if(NVR_USING_VCPKG)
         find_package(WebP CONFIG QUIET)
@@ -199,15 +150,7 @@ if(WITH_WEBP)
     endif()
 endif()
 
-if(WITH_LIBCAM AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(LIBCAM libcamera)
-    if(LIBCAM_FOUND)
-        set(HAVE_LIBCAM 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${LIBCAM_INCLUDE_DIRS})
-        list(APPEND NVR_OPTIONAL_LIBRARIES ${LIBCAM_LIBRARIES})
-    endif()
-endif()
-
+# FFmpeg（必选级可选：缺失即报错）
 if(WITH_FFMPEG)
     if(NVR_USING_VCPKG)
         find_package(FFMPEG REQUIRED)
@@ -221,39 +164,13 @@ if(WITH_FFMPEG)
     list(APPEND NVR_OPTIONAL_LIBRARIES ${FFMPEG_LIBRARIES})
 endif()
 
+# OpenCV / SQLite3：find_package，vcpkg 与系统库均适用
 if(WITH_OPENCV)
     find_package(OpenCV)
     if(OpenCV_FOUND)
         set(HAVE_OPENCV 1)
         list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${OpenCV_INCLUDE_DIRS})
         list(APPEND NVR_OPTIONAL_LIBRARIES ${OpenCV_LIBS})
-    endif()
-endif()
-
-if(WITH_MARIADB AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(MARIADB libmariadb)
-    if(MARIADB_FOUND)
-        set(HAVE_MARIADB 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${MARIADB_INCLUDE_DIRS})
-        list(APPEND NVR_OPTIONAL_LIBRARIES ${MARIADB_LIBRARIES})
-    endif()
-endif()
-
-if(WITH_MYSQL AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(MYSQL mysqlclient)
-    if(MYSQL_FOUND)
-        set(HAVE_MARIADB 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${MYSQL_INCLUDE_DIRS})
-        list(APPEND NVR_OPTIONAL_LIBRARIES ${MYSQL_LIBRARIES})
-    endif()
-endif()
-
-if(WITH_PGSQL AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(PGSQL libpq)
-    if(PGSQL_FOUND)
-        set(HAVE_PGSQLDB 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${PGSQL_INCLUDE_DIRS})
-        list(APPEND NVR_OPTIONAL_LIBRARIES ${PGSQL_LIBRARIES})
     endif()
 endif()
 
@@ -266,31 +183,47 @@ if(WITH_SQLITE3)
     endif()
 endif()
 
-if(WITH_PULSE AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(PULSE libpulse)
-    # pkg_check_modules(PULSE_SIMPLE REQUIRED libpulse-simple)
-    if(PULSE_SIMPLE_FOUND AND PULSE_FOUND)
-        set(HAVE_PULSE 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS
-            ${PULSE_INCLUDE_DIRS}
-            ${PULSE_SIMPLE_INCLUDE_DIRS}
-        )
-        list(APPEND NVR_OPTIONAL_LIBRARIES
-            ${PULSE_LIBRARIES}
-            ${PULSE_SIMPLE_LIBRARIES}
-        )
+# ------------------------------------------------------------------------------
+# pkg-config 可选库（Linux 路径；vcpkg 模式跳过——避免把宿主架构系统库误链进交叉目标）
+if(NOT NVR_USING_VCPKG)
+    # 一一对应项：HAVE 宏 = HAVE_<名称>
+    set(NVR_PKG_NAMES LIBCAM MARIADB PULSE ALSA)
+    set(NVR_PKG_MODS  "libcamera" "libmariadb" "libpulse;libpulse-simple" "alsa")
+    foreach(nvr_name nvr_mods IN ZIP_LISTS NVR_PKG_NAMES NVR_PKG_MODS)
+        if(WITH_${nvr_name})
+            pkg_check_modules(${nvr_name} ${nvr_mods})
+            if(${nvr_name}_FOUND)
+                set(HAVE_${nvr_name} 1)
+                list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${${nvr_name}_INCLUDE_DIRS})
+                list(APPEND NVR_OPTIONAL_LIBRARIES ${${nvr_name}_LIBRARIES})
+            endif()
+        endif()
+    endforeach()
+
+    # MySQL/PostgreSQL：额外定义启动横幅宏（HAVE_MYSQL/HAVE_PGSQL）
+    if(WITH_MYSQL)
+        pkg_check_modules(MYSQL mysqlclient)
+        if(MYSQL_FOUND)
+            # dbse 后端通过 libmariadb 兼容层访问 mysql 客户端
+            set(HAVE_MARIADB 1)
+            set(HAVE_MYSQL 1)
+            list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${MYSQL_INCLUDE_DIRS})
+            list(APPEND NVR_OPTIONAL_LIBRARIES ${MYSQL_LIBRARIES})
+        endif()
+    endif()
+
+    if(WITH_PGSQL)
+        pkg_check_modules(PGSQL libpq)
+        if(PGSQL_FOUND)
+            set(HAVE_PGSQLDB 1)
+            set(HAVE_PGSQL 1)
+            list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${PGSQL_INCLUDE_DIRS})
+            list(APPEND NVR_OPTIONAL_LIBRARIES ${PGSQL_LIBRARIES})
+        endif()
     endif()
 endif()
 
-if(WITH_ALSA AND NOT NVR_USING_VCPKG)
-    pkg_check_modules(ALSA alsa)
-    if(ALSA_FOUND)
-        set(HAVE_ALSA 1)
-        list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${ALSA_INCLUDE_DIRS})
-        list(APPEND NVR_OPTIONAL_LIBRARIES ${ALSA_LIBRARIES})
-    endif()
-endif()
-
+# FFTW3：vcpkg 走 config targets，Linux 走 pkg-config
 if(WITH_FFTW3)
     if(NVR_USING_VCPKG)
         find_package(FFTW3 CONFIG QUIET)
@@ -312,12 +245,17 @@ endif()
 # 警告标志
 option(WITH_DEVELOPER_FLAGS "Enable developer warning flags" OFF)
 option(WITH_CLANG_FLAGS "Enable clang warning flags" OFF)
+set(NVR_WARN_FLAGS
+    -W -Wall -Wextra -Wconversion -Wformat -Wshadow -Wpointer-arith
+    -Wwrite-strings -Wredundant-decls -Wno-sign-conversion -Wno-sign-compare
+    -ggdb -g3
+)
 if(WITH_DEVELOPER_FLAGS)
-    add_compile_options(-W -pedantic -Werror -Wall -Wextra -Wconversion -Wformat -Wshadow -Wpointer-arith -Wwrite-strings -Wredundant-decls -Wno-sign-conversion -Wno-sign-compare -ggdb -g3)
+    add_compile_options(${NVR_WARN_FLAGS} -pedantic -Werror)
 elseif(WITH_CLANG_FLAGS)
-    add_compile_options(-W -pedantic -Werror -Wall -Wextra -Wconversion -Wformat -Wshadow -Wpointer-arith -Wwrite-strings -Wredundant-decls -Wno-c11-extensions -Wno-sign-conversion -Wno-sign-compare -ggdb -g3)
+    add_compile_options(${NVR_WARN_FLAGS} -pedantic -Werror -Wno-c11-extensions)
 else()
-    add_compile_options(-W -O3 -Wall -Wextra -Wconversion -Wformat -Wshadow -Wpointer-arith -Wwrite-strings -Wredundant-decls -Wno-sign-conversion -Wno-sign-compare -ggdb -g3)
+    add_compile_options(${NVR_WARN_FLAGS} -O3)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -343,6 +281,7 @@ message(STATUS "   **************************")
 message(STATUS "      Configure status       ")
 message(STATUS "      ${PROJECT_NAME} ${PROJECT_VERSION}")
 message(STATUS "   **************************")
+message(STATUS "vcpkg mode: ${NVR_USING_VCPKG}")
 message(STATUS "CPPFLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "LIBS: ${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")

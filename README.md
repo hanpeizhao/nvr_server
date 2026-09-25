@@ -18,7 +18,7 @@
 ```
 
 ## 构建（Linux）
-- CMakeLists.txt 是 Linux 编译版本，依赖库通过 **find_package** 和 **pkg_check_modules** 查找（cmake、g++、libmicrohttpd-dev、libjpeg、zlib、ffmpeg 等）。
+- CMakeLists.txt 是 Linux 编译版本，依赖库通过 **find_package** 和 **pkg_check_modules** 查找（cmake ≥ 3.20、g++、libmicrohttpd-dev、libjpeg、zlib、ffmpeg 等）。
 - 在仓库根目录执行：
   ```
   cmake -B build && cmake --build build
@@ -29,7 +29,7 @@
 ## 构建（Android，arm64-v8a）
 Android 与 Linux 同形态：产出**命令行可执行文件**（非 APK/JNI），经 adb 或 Termux 直接运行，依赖通过 [vcpkg](https://vcpkg.io) 交叉编译获取。
 
-- 前置：Android NDK（r21+）、CMake ≥ 3.10、vcpkg：
+- 前置：Android NDK（r21+）、CMake ≥ 3.20、vcpkg：
   ```
   git clone https://github.com/microsoft/vcpkg.git
   ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
