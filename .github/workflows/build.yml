@@ -36,7 +36,7 @@ jobs:
         with:
           name: ztnvr-linux-x86_64
           path: |
-            build/ztnvr
+            build/src/ztnvr
             build/webui/
             configs/
           retention-days: 14
