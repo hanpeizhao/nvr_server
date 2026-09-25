@@ -82,10 +82,11 @@ foreach(tgt ${NVR_MODULES})
     target_link_libraries(${tgt} PUBLIC Threads::Threads)
 endforeach()
 
-# 系统库按符号使用归属分配到模块
+# 系统库按符号使用归属分配到模块（谁使用谁链接，PUBLIC 向上层传播）
 target_link_libraries(nvr_platform PUBLIC
     ${JPEG_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${FFMPEG_LIBRARIES}   # util.cpp(mypacket_alloc/util_resize)、logger.cpp(av_log_set_callback)
 )
 
 target_link_libraries(nvr_conf PUBLIC
