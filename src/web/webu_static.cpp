@@ -137,13 +137,6 @@ static bool webu_static_root(std::string &webroot) {
   return false;
 }
 
-bool WebStatic::available() {
-  if (webroot != "") {
-    return true;
-  }
-  return webu_static_root(webroot);
-}
-
 /* Serve the file for the requested path.  Any path which is not found is
  * answered with index.html so the frontend router can display its own
  * "not found" view.
@@ -153,6 +146,19 @@ void WebStatic::main() {
   struct MHD_Response *response;
   std::string relpath, full_nm, mimetype;
   size_t baselen;
+
+  /* Resolve the webroot on first use (idempotent); bail out when no
+   * usable webui bundle exists anywhere.
+   */
+  if ((webroot == "") && (!webu_static_root(webroot))) {
+    webua->resp_page =
+        "<html><head><title>WebUI not installed</title></head><body>"
+        "The web interface bundle was not found.  Build the frontend and "
+        "place its dist output into the webui directory.</body></html>";
+    webua->resp_type = WEBUI_RESP_HTML;
+    webua->mhd_send();
+    return;
+  }
 
   if (webua->url == "/" || webua->url == "") {
     relpath = "/index.html";

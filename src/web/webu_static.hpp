@@ -13,9 +13,11 @@ public:
   WebStatic(WebAnswer *p_webua);
   ~WebStatic();
 
-  /* True when a webroot directory exists on this system */
-  bool available();
-  /* Serve the requested file or fall back to index.html */
+  /* Serve the requested file or fall back to index.html.
+   * The webroot is resolved on first use (cwd relative, exe directory,
+   * configdir); requests fail with an explanatory page when no usable
+   * "webui" bundle exists anywhere.
+   */
   void main();
 
 private:
