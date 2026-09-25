@@ -31,12 +31,23 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
-      - name: Assemble release layout
+      - name: Assemble self-contained release
         run: |
-          mkdir -p dist/webui dist/configs
+          sudo apt-get install -y patchelf
+          mkdir -p dist/webui dist/configs dist/lib
           cp build/src/ztnvr dist/
           cp -r build/webui/. dist/webui/
           cp -r configs/. dist/configs/
+
+          # 拷贝所有非 glibc 内核库（libc/libm/ld-linux 等由运行环境提供）
+          ldd build/src/ztnvr | awk '$3 ~ /^\// {print $3}' \
+            | grep -vE 'libc\.so|libm\.so|libpthread|libdl\.so|librt\.so|ld-linux|libgcc_s' \
+            | sort -u > libs.txt
+          while read -r so; do cp -L "$so" dist/lib/; done < libs.txt
+
+          # rpath: 主程序从 $ORIGIN/lib 找库；lib/ 内部的传递依赖用 $ORIGIN 互查
+          patchelf --set-rpath '$ORIGIN/lib' dist/ztnvr
+          find dist/lib -name '*.so*' -exec patchelf --set-rpath '$ORIGIN' {} +
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
