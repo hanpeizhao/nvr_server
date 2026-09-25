@@ -60,10 +60,29 @@ Android 与 Linux 同形态：产出**命令行可执行文件**（非 APK/JNI�
   - CI 提供手动触发的 Android 构建 job（workflow_dispatch）。
 
 ## 运行
-- 启动时通过命令行参数读取 .conf 配置文件，如同
+- 启动时通过命令行参数读取 .conf 配置文件：
   ```
-  ztnvr -c camera.conf
+  ztnvr -c configs/camera.conf
   ```
+- 运行前编辑 `configs/camera1-dist.conf`，取消 `netcam_url` 注释并填入实际 RTSP 地址
+
+### 获取编译产物
+
+- 每次推送到 GitHub 后，Linux job 会构建并上传 artifact（Actions 页面 → 对应 run 底部 → Artifacts → `ztnvr-linux-x86_64`，保留 14 天）
+- 产物为可直接运行的部署布局：
+  ```
+  ztnvr      主程序（Linux x86-64 ELF，无扩展名；Windows 资源管理器中不显形为程序）
+  webui/     前端产物（必须与主程序同目录，webu_static 按 exe 同目录查找）
+  configs/   样例配置（通过 -c 显式指定路径）
+  ```
+- 运行步骤（WSL2 或 Linux 服务器）：
+  ```
+  unzip ztnvr-linux-x86_64.zip
+  cd ztnvr-linux-x86_64
+  chmod +x ztnvr
+  ./ztnvr -c configs/camera.conf
+  ```
+- 注意：CI 在 ubuntu-24.04 上编译，二进制要求 glibc ≥ 2.39 的运行环境（较新发行版或 WSL2 最新 Ubuntu）；arm64-v8a 版本由 Android job（手动触发 workflow_dispatch）交叉编译
 
 ## 配置文件格式
 

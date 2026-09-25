@@ -31,14 +31,18 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+      - name: Assemble release layout
+        run: |
+          mkdir -p dist/webui dist/configs
+          cp build/src/ztnvr dist/
+          cp -r build/webui/. dist/webui/
+          cp -r configs/. dist/configs/
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ztnvr-linux-x86_64
-          path: |
-            build/src/ztnvr
-            build/webui/
-            configs/
+          path: dist/
           retention-days: 14
 
   webui-build:
