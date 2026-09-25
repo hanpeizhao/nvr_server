@@ -411,7 +411,11 @@ void WebJson::loghistory() {
 
   pthread_mutex_lock(&motlog->mutex_log);
   for (indx = 0; indx < motlog->log_vec.size(); indx++) {
-    if (motlog->log_vec[indx].log_nbr > mtoi(webua->uri_cmd2)) {
+    /* log_history_init pre-fills the ring buffer with empty entries to
+     * keep line numbering stable; only real messages are served.
+     */
+    if ((motlog->log_vec[indx].log_nbr > mtoi(webua->uri_cmd2)) &&
+        (motlog->log_vec[indx].log_msg != "")) {
       if (frst == true) {
         webua->resp_page += "{";
         frst = false;

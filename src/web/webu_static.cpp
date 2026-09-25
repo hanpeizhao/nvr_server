@@ -86,15 +86,28 @@ static bool webu_static_valid(const std::string &dir) {
  * running executable, and finally under the configdir location.
  */
 static bool webu_static_root(std::string &webroot) {
+  /* The webroot never changes at runtime, so it is resolved once per
+   * process.  WebStatic instances are per-connection, therefore the
+   * member variable cannot serve as a cache.
+   */
+  static std::string root_cache;
+  static bool root_resolved = false;
   char exe_path[WEBUI_LEN_URLI];
   ssize_t len;
   std::string dir;
   size_t pos;
 
+  if (root_resolved) {
+    webroot = root_cache;
+    return true;
+  }
+
   webroot = "webui";
   MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
              "probing webroot candidate 1 (cwd relative): %s", webroot.c_str());
   if (webu_static_valid(webroot)) {
+    root_cache = webroot;
+    root_resolved = true;
     MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot resolved: %s",
                webroot.c_str());
     return true;
@@ -126,6 +139,8 @@ static bool webu_static_root(std::string &webroot) {
   MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO,
              "probing webroot candidate 3 (configdir): %s", webroot.c_str());
   if (webu_static_valid(webroot)) {
+    root_cache = webroot;
+    root_resolved = true;
     MOTPLS_LOG(NTC, TYPE_ALL, NO_ERRNO, "webroot resolved: %s",
                webroot.c_str());
     return true;
@@ -147,10 +162,10 @@ void WebStatic::main() {
   std::string relpath, full_nm, mimetype;
   size_t baselen;
 
-  /* Resolve the webroot on first use (idempotent); bail out when no
+  /* Resolve the webroot (cached per process); bail out when no
    * usable webui bundle exists anywhere.
    */
-  if ((webroot == "") && (!webu_static_root(webroot))) {
+  if (!webu_static_root(webroot)) {
     webua->resp_page =
         "<html><head><title>WebUI not installed</title></head><body>"
         "The web interface bundle was not found.  Build the frontend and "
