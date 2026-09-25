@@ -130,7 +130,7 @@ if(WITH_WEBP)
             list(APPEND NVR_OPTIONAL_LIBRARIES WebP::webpmux WebP::webp)
         endif()
     else()
-        pkg_check_modules(WEBP libwebpmux)
+        pkg_check_modules(WEBP libwebpmux libwebp) # encode API(WebPMemoryWriter) 在 libwebp，libwebpmux.pc 不传递它
         if(WEBP_FOUND)
             set(HAVE_WEBP 1)
             list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${WEBP_INCLUDE_DIRS})
