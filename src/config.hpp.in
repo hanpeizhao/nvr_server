@@ -1,33 +1,35 @@
 /* config.hpp - 由 CMake configure_file 生成，勿手动修改 */
 /* 仅保留被源码引用的特性宏；基础 libc 头文件在 ztnvr.hpp 中无条件包含 */
+/* 统一使用 #cmakedefine X 1：真值输出 #define X 1，假值输出 undef 注释，
+   兼容源码中 #ifdef 与裸值判断（#if X）两种用法 */
 
 /* NLS（预留钩子：CMake 未设置变量时保持未定义） */
-#cmakedefine ENABLE_NLS
-#cmakedefine HAVE_GETTEXT
+#cmakedefine ENABLE_NLS 1
+#cmakedefine HAVE_GETTEXT 1
 
 /* 数据库后端（dbse） */
-#cmakedefine HAVE_MARIADB
-#cmakedefine HAVE_MYSQL
-#cmakedefine HAVE_PGSQLDB
-#cmakedefine HAVE_PGSQL
-#cmakedefine HAVE_SQLITE3DB
+#cmakedefine HAVE_MARIADB 1
+#cmakedefine HAVE_MYSQL 1
+#cmakedefine HAVE_PGSQLDB 1
+#cmakedefine HAVE_PGSQL 1
+#cmakedefine HAVE_SQLITE3DB 1
 
 /* 可选库 */
-#cmakedefine HAVE_ALSA
-#cmakedefine HAVE_FFTW3
-#cmakedefine HAVE_LIBCAM
-#cmakedefine HAVE_OPENCV
-#cmakedefine HAVE_PULSE
-#cmakedefine HAVE_WEBP
-#cmakedefine HAVE_V4L2
+#cmakedefine HAVE_ALSA 1
+#cmakedefine HAVE_FFTW3 1
+#cmakedefine HAVE_LIBCAM 1
+#cmakedefine HAVE_OPENCV 1
+#cmakedefine HAVE_PULSE 1
+#cmakedefine HAVE_WEBP 1
+#cmakedefine HAVE_V4L2 1
 
 /* 平台特性（非致命探测，缺失时源码走降级路径） */
-#cmakedefine HAVE_LINUX_VIDEODEV2_H
-#cmakedefine HAVE_PTHREAD_NP_H
-#cmakedefine HAVE_REGEX_H
-#cmakedefine HAVE_PTHREAD_SETNAME_NP
-#cmakedefine HAVE_PTHREAD_GETNAME_NP
-#cmakedefine XSI_STRERROR_R
+#cmakedefine HAVE_LINUX_VIDEODEV2_H 1
+#cmakedefine HAVE_PTHREAD_NP_H 1
+#cmakedefine HAVE_REGEX_H 1
+#cmakedefine HAVE_PTHREAD_SETNAME_NP 1
+#cmakedefine HAVE_PTHREAD_GETNAME_NP 1
+#cmakedefine XSI_STRERROR_R 1
 
 /* 包信息（VERSION 被版本字符串/API 响应引用） */
 #define PACKAGE_VERSION "@PROJECT_VERSION@"
