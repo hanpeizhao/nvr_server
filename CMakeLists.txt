@@ -175,9 +175,11 @@ endif()
 # ------------------------------------------------------------------------------
 # pkg-config 可选库（Linux 路径；vcpkg 模式跳过——避免把宿主架构系统库误链进交叉目标）
 if(NOT NVR_USING_VCPKG)
-    # 一一对应项：HAVE 宏 = HAVE_<名称>
-    set(NVR_PKG_NAMES LIBCAM MARIADB PULSE ALSA)
-    set(NVR_PKG_MODS  "libcamera" "libmariadb" "libpulse;libpulse-simple" "alsa")
+    # 一一对应项：HAVE 宏 = HAVE_<名称>。
+    # 注意：PULSE 需双模块且两者同时找到，放 foreach 外单独处理，
+    # 避免在 set 列表里嵌套分号元素（set 会丢失引号参数的元素边界导致错位）
+    set(NVR_PKG_NAMES LIBCAM MARIADB ALSA)
+    set(NVR_PKG_MODS  libcamera libmariadb alsa)
     foreach(nvr_name nvr_mods IN ZIP_LISTS NVR_PKG_NAMES NVR_PKG_MODS)
         if(WITH_${nvr_name})
             pkg_check_modules(${nvr_name} ${nvr_mods})
@@ -188,6 +190,16 @@ if(NOT NVR_USING_VCPKG)
             endif()
         endif()
     endforeach()
+
+    # PulseAudio：多模块检测，pkg_check_modules 要求全部找到才置 FOUND
+    if(WITH_PULSE)
+        pkg_check_modules(PULSE libpulse libpulse-simple)
+        if(PULSE_FOUND)
+            set(HAVE_PULSE 1)
+            list(APPEND NVR_OPTIONAL_INCLUDE_DIRS ${PULSE_INCLUDE_DIRS})
+            list(APPEND NVR_OPTIONAL_LIBRARIES ${PULSE_LIBRARIES})
+        endif()
+    endif()
 
     # MySQL/PostgreSQL：额外定义启动横幅宏（HAVE_MYSQL/HAVE_PGSQL）
     if(WITH_MYSQL)
