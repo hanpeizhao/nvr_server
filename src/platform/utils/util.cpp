@@ -84,8 +84,8 @@ void myunquote(std::string &parm) {
 
   plen = parm.length();
   while ((plen >= 2) &&
-         (((parm.substr(0, 1) == "\"") && (parm.substr(plen, 1) == "\"")) ||
-          ((parm.substr(0, 1) == "'") && (parm.substr(plen, 1) == "'")))) {
+         (((parm.substr(0, 1) == "\"") && (parm.substr(plen - 1, 1) == "\"")) ||
+          ((parm.substr(0, 1) == "'") && (parm.substr(plen - 1, 1) == "'")))) {
 
     parm = parm.substr(1, plen - 2);
     plen = parm.length();
