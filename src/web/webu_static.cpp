@@ -57,20 +57,35 @@ static std::string webu_static_mimetype(const std::string &fname) {
   return "application/octet-stream";
 }
 
+/* A webroot candidate is only valid when the directory exists and contains
+ * a usable index.html; otherwise the search falls through to the next one.
+ */
+static bool webu_static_valid(const std::string &dir) {
+  struct stat file_attrib;
+  std::string index_nm;
+
+  if ((stat(dir.c_str(), &file_attrib) != 0) ||
+      (!S_ISDIR(file_attrib.st_mode))) {
+    return false;
+  }
+
+  index_nm = dir + "/index.html";
+  return (stat(index_nm.c_str(), &file_attrib) == 0) &&
+         S_ISREG(file_attrib.st_mode);
+}
+
 /* Locate the webroot directory.  The build/deploy step places the compiled
  * frontend under "webui"; we look next to the current directory, next to the
  * running executable, and finally under the configdir location.
  */
 static bool webu_static_root(std::string &webroot) {
-  struct stat file_attrib;
   char exe_path[WEBUI_LEN_URLI];
   ssize_t len;
   std::string dir;
   size_t pos;
 
   webroot = "webui";
-  if ((stat(webroot.c_str(), &file_attrib) == 0) &&
-      S_ISDIR(file_attrib.st_mode)) {
+  if (webu_static_valid(webroot)) {
     return true;
   }
 
@@ -82,8 +97,7 @@ static bool webu_static_root(std::string &webroot) {
     pos = dir.rfind("/");
     if (pos != std::string::npos) {
       dir = dir.substr(0, pos) + "/webui";
-      if ((stat(dir.c_str(), &file_attrib) == 0) &&
-          S_ISDIR(file_attrib.st_mode)) {
+      if (webu_static_valid(dir)) {
         webroot = dir;
         return true;
       }
@@ -91,8 +105,7 @@ static bool webu_static_root(std::string &webroot) {
   }
 
   webroot = std::string(configdir) + "/webui";
-  if ((stat(webroot.c_str(), &file_attrib) == 0) &&
-      S_ISDIR(file_attrib.st_mode)) {
+  if (webu_static_valid(webroot)) {
     return true;
   }
 
