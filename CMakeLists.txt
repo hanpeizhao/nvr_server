@@ -50,15 +50,10 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 必选依赖：pthread / jpeg / libmicrohttpd / zlib
+# find_package/pkg REQUIRED 已验证库与头的完整性（FindJPEG 还解析 jpeglib.h 版本），
+# 不叠加 check_include_file 关卡——其 try_compile 失败时会吞掉真实编译错误
 find_package(Threads REQUIRED)
-
 find_package(JPEG REQUIRED)
-set(CMAKE_REQUIRED_INCLUDES ${JPEG_INCLUDE_DIRS})
-check_include_file(jpeglib.h HAVE_JPEGLIB_H)
-unset(CMAKE_REQUIRED_INCLUDES)
-if(NOT HAVE_JPEGLIB_H)
-    message(FATAL_ERROR "Required jpeg headers not found")
-endif()
 
 # libmicrohttpd 无 cmake config：vcpkg 用 find_path/find_library，Linux 用 pkg-config
 if(NVR_USING_VCPKG)
@@ -74,12 +69,6 @@ else()
 endif()
 
 find_package(ZLIB REQUIRED)
-set(CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIRS})
-check_include_file(zlib.h HAVE_ZLIB_H)
-unset(CMAKE_REQUIRED_INCLUDES)
-if(NOT HAVE_ZLIB_H)
-    message(FATAL_ERROR "Required package zlib not found")
-endif()
 
 # ------------------------------------------------------------------------------
 # 平台特性探测（非致命：缺失时源码走内置降级路径，宏经 #cmakedefine 输出）
